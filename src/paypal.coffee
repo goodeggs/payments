@@ -2,6 +2,7 @@ qs = require 'querystring'
 request = require 'request'
 
 required = ['apiUrl', 'user', 'pwd', 'signature']
+paypalUrl = process.env.NODE_ENV is 'production' and 'https://www.paypal.com' or 'https://www.sandbox.paypal.com/'
 defaults =
   apiUrl: process.env.NODE_ENV is 'production' and 'https://api-3t.paypal.com/nvp' or 'https://api-3t.sandbox.paypal.com/nvp'
   version: '85.0'
@@ -36,7 +37,7 @@ module.exports = paypal =
     upperCaseRequest[key.toUpperCase()] = value for key, value of requestParams
 
     request.post {url: url, form: upperCaseRequest}, (err, httpResponse) ->
-      return cb(err) if err
+      return cb(err) if err?
       return cb(new Error("Unexpected #{httpResponse.statusCode} response from POST to #{url}")) unless httpResponse.statusCode is 200
 
       response = {}
@@ -54,6 +55,15 @@ module.exports = paypal =
           cb(new Error(paypal.buildErrorMessage(response)))
         else
           cb(new Error("Unknown paypal ack #{response.ack}"))
+
+
+  # Calls back with the paypal URL to redirect the user to in order to collect payment.
+  setExpressCheckout: (params, cb) ->
+    paypal.request 'SetExpressCheckout', params, (err, response) ->
+      return cb(err) if err?
+      return cb(new Error("[Paypal ref #{response.correlationid}] missing expected token")) unless response.token
+
+      cb(null, "#{paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', token: response.token)}")
 
   parseLists: (response) ->
     result = []

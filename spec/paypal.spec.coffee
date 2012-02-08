@@ -124,6 +124,27 @@ describe 'request', ->
       result.build.should.equal '2515991'
       done()
 
+describe 'setExpressCheckout', ->
+  afterEach ->
+    sinon.restore()
+
+  it 'returns a paypal payment url url', (done) ->
+    params = {}
+    
+    mock = sinon.mock(paypal)
+    mock.expects('request').withArgs('SetExpressCheckout', params).callsArgWith 2, null,
+      token: 'EC-4L057467UU893972F'
+      timestamp: '2012-02-08T08:18:43Z'
+      correlationid: '1c1401273ec37'
+      ack: 'Success'
+      version: '85.0'
+      build: '2515991'
+
+    paypal.setExpressCheckout params, (err, result) ->
+      result.should.equal 'https://www.sandbox.paypal.com/webscr?cmd=_express-checkout&token=EC-4L057467UU893972F'
+      done()
+
+
 describe 'buildErrorMessage', ->
   it 'contains the error fields', ->
     response =
