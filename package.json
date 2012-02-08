@@ -1,0 +1,30 @@
+{
+  "name"            : "paypal"
+, "version"         : "0.0.1"
+, "private"         : "true"
+, "description"     : "A simple wrapper for the paypal api"
+, "homepage"        : "http://github.com/goodeggs/paypal"
+, "repository"      : { "type" : "git"
+                      , "url"  : "https://github.com/goodeggs/paypal.git"
+                      }
+, "keywords"        : ["paypal", "api"]
+, "author"          : "Randy Puro <randy@goodeggsinc.com>"
+, "contributors"    : [ "Bob Zoller <bob@goodeggsinc.com>"
+                      , "Alon Salant <alon@goodeggsinc.com>"
+                      ]
+, "maintainers"     : "Randy Puro <randy@goodeggsinc.com>"
+, "licenses"        : ["MIT"]
+, "dependencies"    : { "request" : "2.9.x"
+                      }
+, "devDependencies" : { "coffee-script":"1.2.x"
+                      , "mocha" : "0.11.x"
+                      , "should" : "0.5.x"
+                      , "sinon" : "1.3.x"
+                      }
+, "main"            : "lib/paypal"
+, "engine" : { "node" : ">=0.6"
+             }
+, "scripts" : { "pretest" : "coffee -cl -o lib src"
+              , "test" : "mocha spec/*"
+              }
+}
