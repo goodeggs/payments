@@ -66,17 +66,19 @@ describe 'request', ->
     paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
       #do nothing
 
-    callUrl = requestStub.lastCall.args[0]
+    options = requestStub.lastCall.args[0]
     cb = requestStub.lastCall.args[1]
 
-    callUrl = url.parse(callUrl, true)
-    callUrl.href.should.match /^https:\/\/api-3t.sandbox.paypal.com\/nvp\?/
-    callUrl.query.USER.should.equal 'user_api1.domain.com'
-    callUrl.query.PWD.should.equal 'someApiPassword'
-    callUrl.query.SIGNATURE.should.equal 'signature123'
-    callUrl.query.METHOD.should.equal 'SetExpressCheckout'
-    callUrl.query.PAYMENTREQUEST_0_AMT.should.equal '29.99'
-    callUrl.query.VERSION.should.equal '85.0'
+    callUrl = url.parse(options.url, true)
+    callUrl.href.should.equal 'https://api-3t.sandbox.paypal.com/nvp'
+    
+    options.form.USER.should.equal 'user_api1.domain.com'
+    options.form.PWD.should.equal 'someApiPassword'
+    options.form.SIGNATURE.should.equal 'signature123'
+    options.form.METHOD.should.equal 'SetExpressCheckout'
+    options.form.PAYMENTREQUEST_0_AMT.should.equal 29.99
+    options.form.VERSION.should.equal '85.0'
+    should.not.exist(options.form.APIURL)
 
   it 'throws an error for a non 200 response', (done) ->
     requestStub.callsArgWith 1, null,
@@ -84,7 +86,7 @@ describe 'request', ->
 
     paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
       err.message.should.match /500/
-      err.message.should.match /https:\/\/api-3t.sandbox.paypal.com\/nvp\?/
+      err.message.should.match /https:\/\/api-3t.sandbox.paypal.com\/nvp/
       done()
 
   it 'returns an error for an error callback', (done) ->
@@ -111,15 +113,15 @@ describe 'request', ->
   it 'returns a url decoded hash of the response body with lower case keys', (done) ->
     requestStub.callsArgWith 1, null,
       statusCode: 200
-      body: 'TIMESTAMP=2012%2d02%2d08T04%3a23%3a39Z&CORRELATIONID=cd65742d7142d&ACK=Success&L_ERRORCODE0=10001&L_SHORTMESSAGE0=Internal%20Error&L_LONGMESSAGE0=Timeout%20processing%20request'
+      body: 'TOKEN=EC%2d4L057467UU893972F&TIMESTAMP=2012%2d02%2d08T08%3a18%3a43Z&CORRELATIONID=1c1401273ec37&ACK=Success&VERSION=85%2e0&BUILD=2515991'
 
     paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
-      result.timestamp.should.equal '2012-02-08T04:23:39Z'
-      result.correlationid.should.equal 'cd65742d7142d'
+      result.token.should.equal 'EC-4L057467UU893972F'
+      result.timestamp.should.equal '2012-02-08T08:18:43Z'
+      result.correlationid.should.equal '1c1401273ec37'
       result.ack.should.equal 'Success'
-      result.l_errorcode0.should.equal '10001'
-      result.l_shortmessage0.should.equal 'Internal Error'
-      result.l_longmessage0.should.equal 'Timeout processing request'
+      result.version.should.equal '85.0'
+      result.build.should.equal '2515991'
       done()
 
 describe 'buildErrorMessage', ->

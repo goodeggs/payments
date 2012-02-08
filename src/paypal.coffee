@@ -29,14 +29,13 @@ module.exports = paypal =
 
     paypal.log('log', 'Paypal request', paypal.sterilizeRequestForLogging(requestParams))
 
-    url = "#{requestParams.apiUrl}?"
+    url = requestParams.apiUrl
     delete requestParams.apiUrl
 
     upperCaseRequest = {}
     upperCaseRequest[key.toUpperCase()] = value for key, value of requestParams
-    url += qs.stringify(upperCaseRequest)
 
-    request.post url, (err, httpResponse) ->
+    request.post {url: url, form: upperCaseRequest}, (err, httpResponse) ->
       return cb(err) if err
       return cb(new Error("Unexpected #{httpResponse.statusCode} response from POST to #{url}")) unless httpResponse.statusCode is 200
 
