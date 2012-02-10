@@ -19,7 +19,6 @@
                       }
 , "devDependencies" : { "coffee-script":"1.2.x"
                       , "jasmine-node" : "1.x.x"
-                      , "should" : "0.5.x"
                       }
 , "main"            : "lib"
 , "engine" : { "node" : ">=0.6"
