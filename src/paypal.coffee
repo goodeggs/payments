@@ -1,5 +1,35 @@
 qs = require 'querystring'
+u = require 'url'
 request = require 'request'
+_ = require 'underscore'
+
+API = [
+  'AddressVerify'
+  'BillOutstandingAmount'
+  'Callback'
+  'CreateRecurringPaymentsProfile'
+  'DoAuthorization'
+  'DoCapture'
+  'DoDirectPayment'
+  'DoExpressCheckoutPayment'
+  'DoNonReferencedCredit'
+  'DoReauthorization'
+  'DoReferenceTransaction'
+  'DoVoid'
+  'GetBalance'
+  'GetBillingAgreementCustomerDetails'
+  'GetExpressCheckoutDetails'
+  'GetRecurringPaymentsProfileDetails'
+  'GetTransactionDetails'
+  'ManageRecurringPaymentsProfileStatus'
+  'ManagePendingTransactionStatus'
+  'MassPayment'
+  'RefundTransaction'
+  'SetCustomerBillingAgreement'
+  'SetExpressCheckout'
+  'TransactionSearch'
+  'UpdateRecurringPaymentsProfile'
+]
 
 required = ['apiUrl', 'user', 'pwd', 'signature']
 paypalUrl = process.env.NODE_ENV is 'production' and 'https://www.paypal.com' or 'https://www.sandbox.paypal.com/'
@@ -21,20 +51,18 @@ module.exports = paypal =
       cb = params
       params = {}
 
-    requestParams = {}
-    for settingsObj in [{method: method}, paypal.options, params]
-      requestParams[key] = value for key, value of settingsObj
+    params = _({}).defaults(params, paypal.options, method: method)
 
-    missing = (key for key in required when not requestParams[key]?.trim())
+    missing = (key for key in required when not params[key]?.trim())
     return cb(new Error("you must configure paypal with #{missing.join(', ')}")) if missing.length isnt 0
 
-    paypal.log('log', 'Paypal request', paypal.sterilizeRequestForLogging(requestParams))
+    paypal.log('log', 'Paypal request', paypal.sterilizeRequestForLogging(params))
 
-    url = requestParams.apiUrl
-    delete requestParams.apiUrl
+    url = params.apiUrl
+    delete params.apiUrl
 
     upperCaseRequest = {}
-    upperCaseRequest[key.toUpperCase()] = value for key, value of requestParams
+    upperCaseRequest[key.toUpperCase()] = value for key, value of params
 
     request.post {url: url, form: upperCaseRequest}, (err, httpResponse) ->
       return cb(err) if err?
@@ -58,12 +86,17 @@ module.exports = paypal =
 
 
   # Calls back with the paypal URL to redirect the user to in order to collect payment.
-  setExpressCheckout: (params, cb) ->
+  startPaymentFlow: (params, cb) ->
+    params = _.clone(params)
+    returnUrl = u.parse(params.returnurl, true)
+    returnUrl.query._paypalpayment = 'success'
+    params.returnurl = u.format(returnUrl)
+
     paypal.request 'SetExpressCheckout', params, (err, response) ->
       return cb(err) if err?
       return cb(new Error("[Paypal ref #{response.correlationid}] missing expected token")) unless response.token
 
-      cb(null, "#{paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', token: response.token)}")
+      cb(null, "#{paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', useraction: 'commit', token: response.token)}")
 
   parseLists: (response) ->
     result = []
@@ -85,3 +118,9 @@ module.exports = paypal =
   #For stubbing
   log: (level, args...) ->
     console[level](args...)
+
+# Add methods for the given api names
+for method in API
+  do (method) ->
+    paypal[method[0].toLowerCase() + method[1..]] = (args...) ->
+      paypal.request(method, args...)

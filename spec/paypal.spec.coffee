@@ -1,8 +1,10 @@
 url = require 'url'
 request = require 'request'
 should = require 'should'
-sinon = require('sinon').sandbox.create()
 paypal = require('../src/paypal')
+fixtures =
+  payment: require './support/fixtures/payment'
+  subscription: require './support/fixtures/subscription'
 
 describe 'configure', ->
 
@@ -36,9 +38,6 @@ describe 'configure', ->
 
 
 describe 'request', ->
-  requestStub = null
-  logStub = null
-
   beforeEach ->
     paypal.reset()
     paypal.configure
@@ -46,28 +45,25 @@ describe 'request', ->
       pwd: 'someApiPassword',
       signature: 'signature123'
 
-    requestStub = sinon.stub(request, 'post')
-    logStub = sinon.stub(paypal, 'log')
-
-  afterEach ->
-    sinon.restore()
+      spyOn(request, 'post')
+      spyOn(paypal, 'log')
 
   it 'logs the sterilized request', ->
     paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
       #do nothing
 
-    logStub.lastCall.args[0].should.equal 'log'
-    for arg in logStub.lastCall.args
+    paypal.log.mostRecentCall.args[0].should.equal 'log'
+    for arg in paypal.log.mostRecentCall.args
       JSON.stringify(arg).should.not.match /someApiPassword/
       JSON.stringify(arg).should.not.match /signature123/
 
   it 'creates a POST with all params in the URL', ->
 
-    paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
+    paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       #do nothing
 
-    options = requestStub.lastCall.args[0]
-    cb = requestStub.lastCall.args[1]
+    options = request.post.mostRecentCall.args[0]
+    cb = request.post.mostRecentCall.args[1]
 
     callUrl = url.parse(options.url, true)
     callUrl.href.should.equal 'https://api-3t.sandbox.paypal.com/nvp'
@@ -81,41 +77,45 @@ describe 'request', ->
     should.not.exist(options.form.APIURL)
 
   it 'throws an error for a non 200 response', (done) ->
-    requestStub.callsArgWith 1, null,
-      statusCode: 500
+    request.post.andCallFake (params, cb) ->
+      cb null,
+        statusCode: 500
 
-    paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
+    paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       err.message.should.match /500/
       err.message.should.match /https:\/\/api-3t.sandbox.paypal.com\/nvp/
       done()
 
   it 'returns an error for an error callback', (done) ->
-    requestStub.callsArgWith 1, new Error('BOOM')
+    request.post.andCallFake (params, cb) ->
+      cb new Error('BOOM')
 
-    paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
+    paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       err.message.should.match /BOOM/
       done()
 
   it 'returns an error for a Failure response', (done) ->
-    requestStub.callsArgWith 1, null,
+    request.post.andCallFake (params, cb) ->
+      cb null,
         statusCode: 200
         body: 'TIMESTAMP=2012%2d02%2d08T04%3a23%3a39Z&CORRELATIONID=cd65742d7142d&ACK=Failure&L_ERRORCODE0=10001&L_SHORTMESSAGE0=Internal%20Error&L_LONGMESSAGE0=Timeout%20processing%20request'
 
-    paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
+    paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       err.message.should.equal '[Paypal Failure ref cd65742d7142d] Internal Error(10001): Timeout processing request'
 
-      logStub.lastCall.args[0].should.equal 'error'
-      logStub.lastCall.args[2].l_errorcode0.should.not.be.empty
+      paypal.log.mostRecentCall.args[0].should.equal 'error'
+      paypal.log.mostRecentCall.args[2].l_errorcode0.should.not.be.empty
 
       done()
 
 
   it 'returns a url decoded hash of the response body with lower case keys', (done) ->
-    requestStub.callsArgWith 1, null,
-      statusCode: 200
-      body: 'TOKEN=EC%2d4L057467UU893972F&TIMESTAMP=2012%2d02%2d08T08%3a18%3a43Z&CORRELATIONID=1c1401273ec37&ACK=Success&VERSION=85%2e0&BUILD=2515991'
+    request.post.andCallFake (params, cb) ->
+      cb null,
+        statusCode: 200
+        body: 'TOKEN=EC%2d4L057467UU893972F&TIMESTAMP=2012%2d02%2d08T08%3a18%3a43Z&CORRELATIONID=1c1401273ec37&ACK=Success&VERSION=85%2e0&BUILD=2515991'
 
-    paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
+    paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       result.token.should.equal 'EC-4L057467UU893972F'
       result.timestamp.should.equal '2012-02-08T08:18:43Z'
       result.correlationid.should.equal '1c1401273ec37'
@@ -124,26 +124,30 @@ describe 'request', ->
       result.build.should.equal '2515991'
       done()
 
-describe 'setExpressCheckout', ->
-  afterEach ->
-    sinon.restore()
-
-  it 'returns a paypal payment url url', (done) ->
+describe 'API methods', ->
+  it 'passes the correct method name to request', ->
     params = {}
+    cb = ->
+
+    spyOn(paypal, 'request')
+
+    paypal.setExpressCheckout(params, cb)
+    paypal.request.mostRecentCall.args.should.eql ['SetExpressCheckout', params, cb]
+
+describe 'startPaymentFlow', ->
+  it 'returns a paypal payment url', (done) ->
+    params =
+      returnurl: 'http://localhost:3001/order/123456'
     
-    mock = sinon.mock(paypal)
-    mock.expects('request').withArgs('SetExpressCheckout', params).callsArgWith 2, null,
-      token: 'EC-4L057467UU893972F'
-      timestamp: '2012-02-08T08:18:43Z'
-      correlationid: '1c1401273ec37'
-      ack: 'Success'
-      version: '85.0'
-      build: '2515991'
+    spyOn(paypal, 'request').andCallFake (method, params, cb) ->
+      method.should.equal 'SetExpressCheckout'
+      params.should.eql
+        returnurl: 'http://localhost:3001/order/123456?_paypalpayment=success'
+      cb null, fixtures.payment.setExpressCheckout.response
 
-    paypal.setExpressCheckout params, (err, result) ->
-      result.should.equal 'https://www.sandbox.paypal.com/webscr?cmd=_express-checkout&token=EC-4L057467UU893972F'
+    paypal.startPaymentFlow params, (err, result) ->
+      result.should.equal "https://www.sandbox.paypal.com/webscr?cmd=_express-checkout&useraction=commit&token=#{fixtures.payment.setExpressCheckout.response.token}"
       done()
-
 
 describe 'buildErrorMessage', ->
   it 'contains the error fields', ->
@@ -196,30 +200,13 @@ describe 'parseLists', ->
       severitycode: 'err'
 
 describe 'sterilizeRequestForLogging', ->
-  sterilized = paypal.sterilizeRequestForLogging
-    user: 'user_api1.domain.com',
-    pwd: 'someApiPassword',
-    signature: 'signature123'
+  it 'should hide sensitive details', ->
+    sterilized = paypal.sterilizeRequestForLogging
+      user: 'user_api1.domain.com',
+      pwd: 'someApiPassword',
+      signature: 'signature123'
 
-  sterilized.should.eql
-    user: 'user_api1.domain.com',
-    pwd: '[HIDDEN]',
-    signature: '[HIDDEN]'
-
-#describe 'actually call it', ->
-#  beforeEach ->
-#    paypal.reset()
-#    paypal.configure
-#        user: 'vendor_1328687313_biz_api1.goodeggsinc.com'
-#        pwd: '1328687337'
-#        signature: 'Aw2qKukXefVCgrC10z6yiJluFBhcAMIy8OAEc1uLo8dRWiFBN8CpawZ3'
-#
-#  it 'calls paypal!', (done) ->
-#      paypal.request 'SetExpressCheckout', {
-#        paymentrequest_0_amt: 29.99
-#        paymentrequest_0_paymentaction: 'Sale'
-#        returnurl: 'https://www.goodeggsinc.com/order/dddd'
-#        cancelurl: 'https://www.goodeggsinc.com/order/ccxcx'
-#      }, (err, result) ->
-#        console.log("RESULT: ", result)
-#        done(err)
+    sterilized.should.eql
+      user: 'user_api1.domain.com',
+      pwd: '[HIDDEN]',
+      signature: '[HIDDEN]'
