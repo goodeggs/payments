@@ -1,11 +1,11 @@
 paypal
 ======
 
-A simple wrapper for the paypal http api.
+A simple wrapper for the payments http api.
 
 install
 ------
-    npm install paypal
+    npm install payments
 
 usage
 ------
