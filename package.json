@@ -1,8 +1,8 @@
 {
-  "name"            : "paypal"
+  "name"            : "payments"
 , "version"         : "0.0.1"
 , "private"         : "true"
-, "description"     : "A simple wrapper for the paypal api"
+, "description"     : "Wrappers for various payments apis"
 , "homepage"        : "http://github.com/goodeggs/paypal"
 , "repository"      : { "type" : "git"
                       , "url"  : "https://github.com/goodeggs/paypal.git"
@@ -21,7 +21,7 @@
                       , "jasmine-node" : "1.x.x"
                       , "should" : "0.5.x"
                       }
-, "main"            : "lib/paypal"
+, "main"            : "lib"
 , "engine" : { "node" : ">=0.6"
              }
 , "scripts" : { "pretest" : "coffee -cl -o lib src"
