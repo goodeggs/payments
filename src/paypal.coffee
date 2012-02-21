@@ -31,19 +31,24 @@ API = [
   'UpdateRecurringPaymentsProfile'
 ]
 
-required = ['apiUrl', 'user', 'pwd', 'signature']
-paypalUrl = process.env.NODE_ENV is 'production' and 'https://www.paypal.com' or 'https://www.sandbox.paypal.com/'
+required = ['user', 'pwd', 'signature']
 defaults =
-  apiUrl: process.env.NODE_ENV is 'production' and 'https://api-3t.paypal.com/nvp' or 'https://api-3t.sandbox.paypal.com/nvp'
   version: '85.0'
 
 module.exports = paypal =
   options: Object.create(defaults)
 
   configure: (opts = {}) ->
+    production = opts.production or false
+    delete opts.production
+
+    paypal.paypalUrl = production and 'https://www.paypal.com' or 'https://www.sandbox.paypal.com/'
+    paypal.apiUrl = production and 'https://api-3t.paypal.com/nvp' or 'https://api-3t.sandbox.paypal.com/nvp'
     paypal.options[key] = value for key, value of opts
 
   reset: ->
+    paypal.paypalUrl = null
+    paypal.apiUrl = null
     paypal.options = Object.create(defaults)
 
   request: (method, params, cb) ->
@@ -58,15 +63,12 @@ module.exports = paypal =
 
     paypal.log('log', 'Paypal request', paypal.sterilizeRequestForLogging(params))
 
-    url = params.apiUrl
-    delete params.apiUrl
-
     upperCaseRequest = {}
     upperCaseRequest[key.toUpperCase()] = value for key, value of params
 
-    request.post {url: url, form: upperCaseRequest}, (err, httpResponse) ->
+    request.post {url: paypal.apiUrl, form: upperCaseRequest}, (err, httpResponse) ->
       return cb(err) if err?
-      return cb(new Error("Unexpected #{httpResponse.statusCode} response from POST to #{url}")) unless httpResponse.statusCode is 200
+      return cb(new Error("Unexpected #{httpResponse.statusCode} response from POST to #{paypal.apiUrl}")) unless httpResponse.statusCode is 200
 
       response = {}
       response[key.toLowerCase()] = value for key, value of qs.parse(httpResponse.body)
@@ -96,7 +98,7 @@ module.exports = paypal =
       return cb(err) if err?
       return cb(new Error("[Paypal ref #{response.correlationid}] missing expected token")) unless response.token
 
-      cb(null, "#{paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', useraction: 'commit', token: response.token)}")
+      cb(null, "#{paypal.paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', useraction: 'commit', token: response.token)}")
 
   parseLists: (response) ->
     result = []

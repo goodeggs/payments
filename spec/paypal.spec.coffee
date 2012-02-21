@@ -19,21 +19,14 @@ describe 'configure', ->
       expect(err.message).toMatch /signature/
       done()
 
-  it 'allows has a default apiUrl', ->
-    expect(paypal.options.apiUrl).toEqual 'https://api-3t.sandbox.paypal.com/nvp'
+  it 'has a default apiUrl', ->
+    paypal.configure()
+    expect(paypal.apiUrl).toEqual 'https://api-3t.sandbox.paypal.com/nvp'
 
 
   it 'allows changing the apiUrl', ->
     paypal.configure(apiUrl: 'https://someotherurl/')
     expect(paypal.options.apiUrl).toEqual 'https://someotherurl/'
-
-  it 'does not allow you to unset the api url', (done) ->
-    paypal.configure(apiUrl: '    ')
-
-    paypal.request 'SetExpressCheckout', (err, result) ->
-      expect(err.message).toMatch /configure/
-      expect(err.message).toMatch /apiUrl/
-      done()
 
 
 describe 'request', ->
@@ -124,6 +117,10 @@ describe 'request', ->
       done()
 
 describe 'API methods', ->
+  beforeEach ->
+    paypal.reset()
+    paypal.configure()
+
   it 'passes the correct method name to request', ->
     params = {}
     cb = ->
@@ -134,6 +131,10 @@ describe 'API methods', ->
     expect(paypal.request.mostRecentCall.args).toEqual ['SetExpressCheckout', params, cb]
 
 describe 'startPaymentFlow', ->
+  beforeEach ->
+    paypal.reset()
+    paypal.configure()
+
   it 'returns a paypal payment url', (done) ->
     params =
       returnurl: 'http://localhost:3001/order/123456'
