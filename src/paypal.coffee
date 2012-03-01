@@ -42,7 +42,7 @@ module.exports = paypal =
     production = opts.production or false
     delete opts.production
 
-    paypal.paypalUrl = production and 'https://www.paypal.com' or 'https://www.sandbox.paypal.com/'
+    paypal.paypalUrl = production and 'https://www.paypal.com/' or 'https://www.sandbox.paypal.com/'
     paypal.apiUrl = production and 'https://api-3t.paypal.com/nvp' or 'https://api-3t.sandbox.paypal.com/nvp'
     paypal.options[key] = value for key, value of opts
 
