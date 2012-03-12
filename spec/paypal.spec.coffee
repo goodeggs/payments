@@ -135,7 +135,7 @@ describe 'startPaymentFlow', ->
     paypal.reset()
     paypal.configure()
 
-  it 'returns a paypal payment url', (done) ->
+  it 'returns a paypal token', (done) ->
     params =
       returnurl: 'http://localhost:3001/order/123456'
     
@@ -146,8 +146,12 @@ describe 'startPaymentFlow', ->
       cb null, fixtures.payment.setExpressCheckout.response
 
     paypal.startPaymentFlow params, (err, result) ->
-      expect(result).toEqual "https://www.sandbox.paypal.com/webscr?cmd=_express-checkout&useraction=commit&token=#{fixtures.payment.setExpressCheckout.response.token}"
+      expect(result).toEqual fixtures.payment.setExpressCheckout.response.token
       done()
+
+describe 'expressCheckoutUrl', ->
+  it 'returns a paypal payment url', ->
+    expect(paypal.expressCheckoutUrl('someToken')).toEqual "https://www.sandbox.paypal.com/webscr?cmd=_express-checkout&useraction=commit&token=someToken"
 
 describe 'buildErrorMessage', ->
   it 'contains the error fields', ->

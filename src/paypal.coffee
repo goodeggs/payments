@@ -87,7 +87,7 @@ module.exports = paypal =
           cb(new Error("Unknown paypal ack #{response.ack}"))
 
 
-  # Calls back with the paypal URL to redirect the user to in order to collect payment.
+  # Calls back with the paypal token which identifies the transaction and can be used to build an express checkout Url.
   startPaymentFlow: (params, cb) ->
     params = _.clone(params)
     returnUrl = u.parse(params.returnurl, true)
@@ -98,7 +98,10 @@ module.exports = paypal =
       return cb(err) if err?
       return cb(new Error("[Paypal ref #{response.correlationid}] missing expected token")) unless response.token
 
-      cb(null, "#{paypal.paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', useraction: 'commit', token: response.token)}")
+      cb(null, response.token)
+
+  expressCheckoutUrl: (token) ->
+    "#{paypal.paypalUrl}webscr?#{qs.stringify(cmd: '_express-checkout', useraction: 'commit', token: token)}"
 
   parseLists: (response) ->
     result = []
