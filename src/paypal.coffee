@@ -61,7 +61,7 @@ module.exports = paypal =
     missing = (key for key in required when not params[key]?.trim())
     return cb(new Error("you must configure paypal with #{missing.join(', ')}")) if missing.length isnt 0
 
-    paypal.log('log', 'Paypal request', paypal.sterilizeRequestForLogging(params))
+    paypal.log('Paypal request', paypal.sterilizeRequestForLogging(params))
 
     upperCaseRequest = {}
     upperCaseRequest[key.toUpperCase()] = value for key, value of params
@@ -74,7 +74,7 @@ module.exports = paypal =
       response[key.toLowerCase()] = value for key, value of qs.parse(httpResponse.body)
 
       #log the result
-      paypal.log(response.ack is 'Success' and 'log' or 'error', "Paypal #{response.ack}", response)
+      paypal.log("Paypal response #{response.ack}", response)
 
       switch response.ack
         when 'Success'
@@ -121,8 +121,8 @@ module.exports = paypal =
     result
 
   #For stubbing
-  log: (level, args...) ->
-    console[level](args...)
+  log: (args...) ->
+    console.log(args...)
 
 # Add methods for the given api names
 for method in API

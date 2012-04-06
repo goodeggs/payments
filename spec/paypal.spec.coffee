@@ -44,7 +44,7 @@ describe 'request', ->
     paypal.request 'SetExpressCheckout', {paymentrequest_0_amt: 29.99}, (err, result) ->
       #do nothing
 
-    expect(paypal.log.mostRecentCall.args[0]).toEqual 'log'
+    expect(paypal.log).toHaveBeenCalled()
     for arg in paypal.log.mostRecentCall.args
       expect(JSON.stringify(arg)).not.toMatch /someApiPassword/
       expect(JSON.stringify(arg)).not.toMatch /signature123/
@@ -95,8 +95,7 @@ describe 'request', ->
     paypal.setExpressCheckout {paymentrequest_0_amt: 29.99}, (err, result) ->
       expect(err.message).toEqual '[Paypal Failure ref cd65742d7142d] Internal Error(10001): Timeout processing request'
 
-      expect(paypal.log.mostRecentCall.args[0]).toEqual 'error'
-      expect(paypal.log.mostRecentCall.args[2].l_errorcode0).toBeDefined()
+      expect(paypal.log.mostRecentCall.args[1].l_errorcode0).toBeDefined()
 
       done()
 
